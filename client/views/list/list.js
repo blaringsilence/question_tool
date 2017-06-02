@@ -12,23 +12,29 @@ Template.list.onCreated(function () {
 });
 
 Template.list.onRendered(() => {
-  // Sets the document title when the template is rendered
   document.title = 'Live Question Answer Tool';
   $('#topinputcontainer').hide();
   $('head').append('<link rel="alternate" type="application/rss+xml" href="/rss/{{tablename}}"/>');
+
   $('#quest-container').isotope({
     itemSelector: '.question-wrapper',
     layoutMode: 'masonry',
     getSortData: {
-      votes: (item) => {
+      hidden: (item) => $(item).data('hidden') ? 1 : 0,
+      rank: (item) => {
         return Number($(item).data('votes'));
       },
+    },
+    sortBy: ['hidden', 'rank'],
+    sortAscending: {
+      hidden: true,
+      rank: false,
     }
   });
+
 });
 
 Template.list.helpers({
-  // Sets the template admin boolean to the Session admin variable
   admin() {
     return Meteor.user() && Meteor.user().emails[0].address === Template.instance().data.admin;
   },
@@ -59,7 +65,6 @@ Template.list.helpers({
   seconds() {
     return Template.instance().seconds.get();
   },
-  // Retrieves, orders, and modifies the questions for the chosen table
   question() {
     let showHidden = false;
     if (Meteor.user()) {
@@ -68,7 +73,9 @@ Template.list.helpers({
         showHidden = true;
       }
     }
-    const query = showHidden ? { instanceid: this._id } : { instanceid: this._id, state: { $ne: 'disabled' } };
+    const query = showHidden ?
+                  { instanceid: this._id } :
+                  { instanceid: this._id, state: { $ne: 'disabled' } };
     return Questions.find(query);
   },
 });

@@ -1,5 +1,5 @@
 <template name="question_div">
-  <div class="question-wrapper" data-votes="{{ voteCount }}">
+  <div class="question-wrapper" data-votes="{{ voteCount }}" data-hidden="{{ isDisabled }}">
     <div id="{{_id}}" class="question question-{{instanceid}} {{#if popular}}popular-question{{else}}{{age_marker}}{{/if}} {{#if isDisabled}}hidden-question{{/if}}">
       <p class="questiontext">{{{text}}}</p>
       <!-- {{# if hasAnswers}}
