@@ -155,6 +155,16 @@ Meteor.setInterval(() => {
 }, 1000);
 
 Template.list.onCreated(function () {
+  $('#quest-container').isotope({
+    itemSelector: '.question-wrapper',
+    layoutMode: 'fitRows',
+    getSortData: {
+      votes: (item) => {
+        console.log(Number($(item).data('votes')));
+        return Number($(item).data('votes'));
+      },
+    }
+  });
   this.seconds = new ReactiveVar(0);
   Session.set('timeval', new Date().getTime());
   Session.set('search', 'all');
