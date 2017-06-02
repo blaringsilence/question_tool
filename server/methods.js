@@ -549,6 +549,7 @@ Meteor.methods({
           Votes.insert({
             qid: questionid,
             uid: this.userId,
+            timeorder: new Date().getTime() - 1000,
             ip,
             instanceid,
           }, (e, id) => {

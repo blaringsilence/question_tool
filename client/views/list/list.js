@@ -1,4 +1,4 @@
-import { Answers, Questions, Instances } from '/lib/common.js';
+import { Answers, Questions, Instances, Votes } from '/lib/common.js';
 import { present, unPresent, popupwindow, enableDragging, showListError, showReplyError, toggleButtonText } from '/client/views/list/helpers.js';
 
 Template.list.onCreated(function () {
@@ -9,6 +9,11 @@ Template.list.onCreated(function () {
   if (adminMod) {
     enableDragging(Template.instance().data._id);
   }
+
+  this.autorun((computation) => {
+    console.log('Autorunning..');
+    $('#quest-container').isotope('updateSortData').isotope();
+  });
 });
 
 Template.list.onRendered(() => {
@@ -22,7 +27,47 @@ Template.list.onRendered(() => {
     getSortData: {
       hidden: (item) => $(item).data('hidden') ? 1 : 0,
       rank: (item) => {
-        return Number($(item).data('votes'));
+        /*
+          Goal: determine questions that are "hot right now", and sort accordingly.
+          Activity:
+            1. Question posted
+            2. Reply
+            3. Upvote
+          Total Score: 0
+          Lifetime: (how new the question is, compared to oldest question)
+            = (((Now - date of first question) / (Now - date of this question)) - 1)
+            So the oldest question would be 0, and the larger the number is, the newer the question.
+            This allows us to use it as a factor for "newness", so the newer the question is, the more
+            likely it is to become "hot".
+          Process:
+            - Go through each individual activity:
+              * Get its date.
+              * Divide that date by "now" (so if it just happened, that would be = 1,
+                                           happened -2 seconds ago, less than 1,
+                                           and so on as we approach 0)
+              * Multiply by the activity's weight
+              * Add to total score
+            - Add lifetime to total score
+        */
+        let total_score = 0;
+        let activity = { posted: [], reply: [], upvote: [] };
+        const id = $(item).data('id');
+        const weights = { posted: 1, reply: 0.5, upvote: 0.1 };
+        const post_date = $(item).data('posted');
+        const now = new Date().getTime() - 1000;
+        const first_question = Questions.findOne({ instanceid: Template.instance().data._id }).timeorder;
+        const lifetime = ((now - first_question) / (now - post_date)) - 1;
+        activity.posted.push(post_date * weights.posted);
+        Answers.find({ qid: id }).forEach((reply) => {
+          const time_diff = reply.timeorder / now;
+          total_score += time_diff * weights.reply;
+        });
+        Votes.find({ qid: id }).forEach((vote) => {
+          const time_diff = vote.timeorder ? vote.timeorder / now : 1;
+          total_score += time_diff * weights.upvote;
+        });
+        total_score += lifetime;
+        return total_score;
       },
     },
     sortBy: ['hidden', 'rank'],
